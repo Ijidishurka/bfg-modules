@@ -3,10 +3,15 @@ import random
 from bot import bot
 from aiogram import types, Dispatcher
 from commands.db import conn, cursor, url_name, get_balance
+from assets.transform import transform_int as tr
 from commands.games.db import gametime
 from commands.main import win_luser
 from assets.antispam import antispam
 from decimal import Decimal
+
+from commands.help import CONFIG
+
+CONFIG['help_game'] += '\n   🔫 Охота (ставка)'
 
 
 wins = [
@@ -73,9 +78,8 @@ async def game(message: types.Message):
 	chance = random.random()
 
 	if chance < 0.45:
-		su = summ * 0.5
-		c2 = '{:,}'.format(int(su)).replace(',', '.')
-		txt = random.choice(wins).format(c2)
+		su = int(summ * 0.5)
+		txt = random.choice(wins).format(tr(su))
 		await upd_balance(uid, su, 'win')
 	elif chance < 0.50:
 		txt = '💥❎ | Вы промазали...  деньги остаются при вас.'
@@ -90,3 +94,9 @@ async def game(message: types.Message):
 
 def register_handlers(dp: Dispatcher):
     dp.register_message_handler(game, lambda message: message.text.lower().startswith('охота'))
+	
+
+MODULE_DESCRIPTION = {
+	'name': '🔫 Охота',
+	'description': 'Новая игра "охота"'
+}
