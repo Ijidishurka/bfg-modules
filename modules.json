@@ -11,7 +11,7 @@
   },
   "TicTacToe": {
     "name":  "❌⭕️ Крестики-нолики",
-    "description": "Новая игра "крестики-нолики" против других игроков (на деньги)",
+    "description": "Новая игра 'крестики-нолики' против других игроков (на деньги)",
     "url": "https://raw.githubusercontent.com/Ijidishurka/bfg-modules/refs/heads/main/TicTacToe.py"
   }
 }
