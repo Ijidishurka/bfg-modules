@@ -8,5 +8,10 @@
     "name":  "\uD83D\uDC7B Halloween",
     "description": "Ивент-модуль хэллоуин:\n- Новое оформление\n- Новый ивент \"монстры\"\n- Новая игра\n- Новые игровые валюты\n\n* Модуль использует собственную базу данных\n* Помощью по модулю введите \"хеллоуин\"",
     "url": "https://raw.githubusercontent.com/Ijidishurka/bfg-modules/refs/heads/main/halloween.py"
+  },
+  "TicTacToe": {
+    "name":  "❌⭕️ Крестики-нолики",
+    "description": "Новая игра "крестики-нолики" против других игроков (на деньги)",
+    "url": "https://raw.githubusercontent.com/Ijidishurka/bfg-modules/refs/heads/main/TicTacToe.py"
   }
 }
