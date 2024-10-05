@@ -37,6 +37,7 @@ class Game:
 		self.last_time = time.time()
 	
 	def start(self):
+		self.last_time = time.time()
 		players = [self.user_id, self.r_id]
 		random.shuffle(players)
 		self.chips['cross'] = players[0]
@@ -274,7 +275,7 @@ async def check_waiting():
 async def check_game():
 	while True:
 		for game in games:
-			if int(time.time()) <= int(game.last_time+60):
+			if int(time.time()) > int(game.last_time+60):
 				games.remove(game)
 				chat_id = game.chat_id
 				message_id = game.message_id
