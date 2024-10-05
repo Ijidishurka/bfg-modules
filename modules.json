@@ -7,6 +7,6 @@
   "halloween": {
     "name":  "\uD83D\uDC7B Halloween",
     "description": "Ивент-модуль хэллоуин:\n- Новое оформление\n- Новый ивент \"монстры\"\n- Новая игра\n- Новые игровые валюты\n\n* Модуль использует собственную базу данных\n* Помощью по модулю введите \"хеллоуин\"",
-    "url": "https://raw.githubusercontent.com/Ijidishurka/bfg-modules/refs/heads/main/hunting.py"
+    "url": "https://raw.githubusercontent.com/Ijidishurka/bfg-modules/refs/heads/main/halloween.py"
   }
 }
