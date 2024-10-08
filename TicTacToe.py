@@ -1,17 +1,19 @@
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from commands.db import conn, cursor, url_name, get_balance, reg_user
-from assets.transform import transform_int as tr
-from aiogram import types, Dispatcher
-from assets.antispam import antispam
-from decimal import Decimal
-from bot import bot
 import asyncio
 import random
 import time
+from decimal import Decimal
 
+from aiogram import types, Dispatcher
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+
+from assets.antispam import antispam
+from assets.transform import transform_int as tr
+from bot import bot
+from commands.db import conn, cursor, url_name, get_balance, reg_user
+from commands.main import win_luser
 from commands.help import CONFIG
 
-CONFIG['help_game'] += '\n   🔘 Кн (ставка)'
+CONFIG['help_game'] += '\n   🔘 Кн [ставка]'
 
 
 games = []
@@ -23,6 +25,20 @@ def creat_start_kb():
 	keyboard.add(InlineKeyboardButton(text="🤯 Принять вызов", callback_data=f"tictactoe-start"))
 	return keyboard
 
+
+async def update_balance(uid, amount, operation="subtract"):
+	balance = cursor.execute('SELECT balance FROM users WHERE user_id = ?', (uid,)).fetchone()[0]
+	
+	if operation == 'add':
+		new_balance = Decimal(str(balance)) + Decimal(str(amount))
+	else:
+		new_balance = Decimal(str(balance)) - Decimal(str(amount))
+	
+	new_balance = "{:.0f}".format(new_balance)
+	cursor.execute('UPDATE users SET balance = ? WHERE user_id = ?', (str(new_balance), uid))
+	cursor.execute('UPDATE users SET games = games + 1 WHERE user_id = ?', (uid,))
+	conn.commit()
+	
 
 class Game:
 	def __init__(self, chat_id, user_id, summ, message_id):
@@ -46,26 +62,7 @@ class Game:
 	def get_user_chips(self, user_id):
 		if self.chips.get('cross') == user_id:
 			return 'cross'
-		else:
-			return 'zero'
-		
-	async def accept_bet(self, user_id):
-		balance = cursor.execute('SELECT balance FROM users WHERE user_id = ?', (user_id,)).fetchone()[0]
-		
-		new_balance = Decimal(str(balance)) - Decimal(str(self.summ))
-		new_balance = "{:.0f}".format(new_balance)
-		
-		cursor.execute(f'UPDATE users SET balance = ? WHERE user_id = ?', (str(new_balance), user_id))
-		conn.commit()
-	
-	async def pay_money(self, user_id, summ):
-		balance = cursor.execute('SELECT balance FROM users WHERE user_id = ?', (user_id,)).fetchone()[0]
-		
-		new_balance = Decimal(str(balance)) + Decimal(str(summ))
-		new_balance = "{:.0f}".format(new_balance)
-		
-		cursor.execute(f'UPDATE users SET balance = ? WHERE user_id = ?', (str(new_balance), user_id))
-		conn.commit()
+		return 'zero'
 		
 	def make_move(self, x, y, user_id):
 		if self.board[x][y] != '  ':
@@ -141,32 +138,36 @@ async def start(message: types.Message):
 	user_id = message.from_user.id
 	name = await url_name(user_id)
 	balance = await get_balance(user_id)
+	win, lose = await win_luser()
 	
 	if message.chat.type != 'supergroup':
 		return
 	
 	if find_game_by_userid(user_id):
-		await message.answer(f'{name}, у вас уже есть активная игра 😒')
+		await message.answer(f'{name}, у вас уже есть активная игра {lose}')
 		return
 		
 	try:
-		summ = message.text.split()[1].replace('е', 'e')
-		summ = int(float(summ))
+		if message.text.lower().split()[1] in ['все', 'всё']:
+			summ = balance
+		else:
+			summ = message.text.split()[1].replace('е', 'e')
+			summ = int(float(summ))
 	except:
-		await message.answer(f'{name}, вы не ввели ставку дял игры 🫤')
+		await message.answer(f'{name}, вы не ввели ставку для игры 🫤')
 		return
 	
 	if summ < 10:
-		await message.answer(f'{name}, минимальная ставка - 10$ 😅')
+		await message.answer(f'{name}, минимальная ставка - 10$ {lose}')
 		return
 	
 	if summ > int(balance):
-		await message.answer(f'{name}, у вас недостаточно денег 😅')
+		await message.answer(f'{name}, у вас недостаточно денег {lose}')
 		return
 	
 	msg = await message.answer(f"❌⭕️ {name} хочет сыграть в крестики-нолики\n💰 Ставка: {tr(summ)}$\n⏳ <i>Ожидаю противника в течении 3х минут</i>", reply_markup=creat_start_kb())
 	game = Game(msg.chat.id, user_id, summ, msg.message_id)
-	await game.accept_bet(user_id)
+	await update_balance(user_id, summ, operation='subtract')
 	waiting[game] = int(time.time()) + 180
 	
 	
@@ -201,7 +202,7 @@ async def start_game_kb(call: types.CallbackQuery):
 {zerop}⭕️ {zero}'''
 	
 	await call.message.edit_text(text, reply_markup=game.get_kb())
-	await game.accept_bet(user_id)
+	await update_balance(user_id, game.summ, operation='subtract')
 
 
 async def game_kb(call: types.CallbackQuery):
@@ -245,14 +246,14 @@ async def game_kb(call: types.CallbackQuery):
 	if result:
 		if result == 'draw':
 			await call.message.answer(f'🥸 У вас ничья!\n<i>Деньги возвращены.</i>', reply=game.message_id)
-			await game.pay_money(game.user_id, game.summ)
-			await game.pay_money(game.r_id, game.summ)
+			await update_balance(game.user_id, game.summ, operation='add')
+			await update_balance(game.r_id, game.summ, operation='add')
 		else:
 			move = 'zero' if result == '⭕️' else 'cross'
 			win = game.chips[move]
 			win_name = await url_name(win)
 			await call.message.answer(f'🎊 {win_name} поздравляем с победой!\n<i>💰 Приз: {tr(game.summ*2)}$</i>', reply=game.message_id)
-			await game.pay_money(win, (game.summ*2))
+			await update_balance(win, (game.summ*2), operation='add')
 		
 		games.remove(game)
 
@@ -283,10 +284,9 @@ async def check_game():
 					win = 'zero' if game.move == 'cross' else 'cross'
 					win = game.chips[win]
 					win_name = await url_name(win)
-					await game.pay_money(win, (game.summ * 2))
+					await update_balance(win, (game.summ * 2), operation='add')
 					txt = f'⚠️ <b>От противника давно не было активности</b>\n{win_name} поздравляем с победой!\n<i>💰 Приз: {tr(game.summ*2)}$</i>'
 					await bot.send_message(chat_id, txt, reply_to_message_id=message_id)
-					await game.pay_money(game.user_id, game.summ)
 				except:
 					pass
 		await asyncio.sleep(30)

@@ -1,17 +1,26 @@
 {
-  "hunting": {
-    "name":  "\uD83D\uDCA5\uD83D\uDC30 Охота",
-    "description": "Новая игра 'охота'",
-    "url": "https://raw.githubusercontent.com/Ijidishurka/bfg-modules/refs/heads/main/hunting.py"
+  "games": {
+    "hunting": {
+      "name": "\uD83C\uDFAE Новые игры",
+      "description": "Модуль добавляет новые игры:\n- Монетка\n- Охота\n- Рыбалка\n- Рулетка",
+      "url": "https://raw.githubusercontent.com/Ijidishurka/bfg-modules/refs/heads/main/hunting.py"
+    },
+    "TicTacToe": {
+      "name": "❌⭕️ Крестики-нолики",
+      "description": "Новая игра 'крестики-нолики' против других игроков (на деньги)",
+      "url": "https://raw.githubusercontent.com/Ijidishurka/bfg-modules/refs/heads/main/TicTacToe.py"
+    },
+    "frog": {
+      "name": "\uD83D\uDC38 Квак",
+      "description": "Новая игра 'квак'",
+      "url": "https://raw.githubusercontent.com/Ijidishurka/bfg-modules/refs/heads/main/frog.py"
+    }
   },
-  "halloween": {
-    "name":  "\uD83D\uDC7B Halloween",
-    "description": "Ивент-модуль хэллоуин:\n- Новое оформление\n- Новый ивент \"монстры\"\n- Новая игра\n- Новые игровые валюты\n\n* Модуль использует собственную базу данных\n* Помощью по модулю введите \"хеллоуин\"",
-    "url": "https://raw.githubusercontent.com/Ijidishurka/bfg-modules/refs/heads/main/halloween.py"
-  },
-  "TicTacToe": {
-    "name":  "❌⭕️ Крестики-нолики",
-    "description": "Новая игра 'крестики-нолики' против других игроков (на деньги)",
-    "url": "https://raw.githubusercontent.com/Ijidishurka/bfg-modules/refs/heads/main/TicTacToe.py"
+  "events": {
+    "halloween": {
+      "name": "\uD83D\uDC7B Halloween",
+      "description": "Ивент-модуль хэллоуин:\n- Новое оформление\n- Новый ивент \"монстры\"\n- Новая игра\n- Новые игровые валюты\n\n* Модуль использует собственную базу данных\n* Помощью по модулю введите \"хеллоуин\"",
+      "url": "https://raw.githubusercontent.com/Ijidishurka/bfg-modules/refs/heads/main/halloween.py"
+    }
   }
 }
