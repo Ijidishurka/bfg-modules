@@ -16,11 +16,24 @@
       "url": "https://raw.githubusercontent.com/Ijidishurka/bfg-modules/refs/heads/main/frog.py"
     }
   },
+
   "events": {
     "halloween": {
       "name": "\uD83D\uDC7B Halloween",
       "description": "Ивент-модуль хэллоуин:\n- Новое оформление\n- Новый ивент \"монстры\"\n- Новая игра\n- Новые игровые валюты\n\n* Модуль использует собственную базу данных\n* Помощью по модулю введите \"хеллоуин\"",
       "url": "https://raw.githubusercontent.com/Ijidishurka/bfg-modules/refs/heads/main/halloween.py"
     }
+  },
+
+  "other": {
+    "referrals": {
+      "name": "\uD83D\uDC65 Реферальная система",
+      "description": "Реферальная система\nЕсть возможность настроить награду за реферала\nКоманда /refsetting",
+      "url": "https://raw.githubusercontent.com/Ijidishurka/bfg-modules/refs/heads/main/referrals.py"
+    }
+  },
+
+  "system": {
+
   }
 }

@@ -15,7 +15,8 @@ CONFIG['help_game'] += '''
    🔫 Охота [ставка]
    🪙 Монетка [орёл/решка] [ставка]
    🎣 Рыбалка [ставка]
-   🎲 Рулетка [тип] [ставка]'''
+   🎲 Рулетка [тип] [ставка]
+   🚀 Краш [ставка] [х]'''
 
 
 async def update_balance(uid, amount, operation="subtract"):
@@ -57,9 +58,9 @@ async def oxota(message: types.Message):
 		"💥🐺 | Волки - наши братья меньшие. На этот раз вам не удалось их победить, но можно попробовать еще разок.",
 		"💥🦊 | Попадание в лису - это успех! Но будет лучше, если вы не смените свое направление и не пойдете на охоту на этих милых зверьков в нашем мире."
 	]
-
+	
 	chance = random.random()
-
+	
 	if chance < 0.45:
 		su = int(summ * 0.5)
 		txt = random.choice(wins).format(tr(su))
@@ -69,7 +70,7 @@ async def oxota(message: types.Message):
 	else:
 		txt = random.choice(losses)
 		await update_balance(uid, summ, operation='subtract')
-
+	
 	msg = await message.answer("💥 | Выстрел... посмотрим в кого вы попали")
 	await asyncio.sleep(2)
 	await bot.edit_message_text(chat_id=msg.chat.id, message_id=msg.message_id, text=txt)
@@ -80,7 +81,7 @@ async def monetka(message: types.Message):
 	uid = message.from_user.id
 	win, lose = await win_luser()
 	name = await url_name(uid)
-
+	
 	try:
 		action = message.text.lower().split()[1]
 		action = 'орёл' if action == 'орел' else action
@@ -97,7 +98,7 @@ async def monetka(message: types.Message):
 	print(win)
 	
 	if win == action:
-		summ = int(summ*2)
+		summ = int(summ * 2)
 		await update_balance(uid, summ, operation='add')
 		txt = f"🎉 {name}, удача на вашей стороне! Монетка упала на {win2}, и вы получили +{tr(summ)}$! {win}"
 	elif win == 'ребро':
@@ -181,8 +182,8 @@ bets_ruletka = ['к', 'ч', 'чет', 'нечет', '1-12', '12-26', '26-36'] + 
 
 colors_ruletka = {0: 'з'}
 for i in range(1, 37):
-    colors_ruletka[i] = 'к' if i % 2 != 0 else 'ч'
-	
+	colors_ruletka[i] = 'к' if i % 2 != 0 else 'ч'
+
 stickers_ruletka = {
 	'к': [
 		'CAACAgIAAxkBAAEMk7FmqmZgtnl1R-JkJEwRfQLdNz6ZLAACFyAAAq8VIEsjVUg0lrkmmTUE',
@@ -204,7 +205,6 @@ stickers_ruletka = {
 		'CAACAgIAAxkBAAEMk8lmqnBzJE7zX9et0fimZsrRsTvAFgACtiEAAjIZGUsIhaOXuETEMzUE'
 	]
 }
-
 
 
 @antispam
@@ -259,15 +259,53 @@ async def roulette(message: types.Message):
 	await message.answer(txt, reply=msg.message_id)
 
 
+@antispam
+async def crash(message: types.Message):
+	uid = message.from_user.id
+	win, lose = await win_luser()
+	url = await url_name(uid)
+	summ = await game_check(message, 1)
+	
+	if not summ:
+		return
+	
+	try:
+		bet = round(float(message.text.lower().split()[2]), 2)
+		if not (1.01 <= bet <= 10):
+			await message.answer(f'''🥶 {url}, <i>ты ввел что-то неправильно!</i>
+<code>·····················</code>
+📈 <b>Краш [ставка] [1.01-10]</b>
+
+Пример: <code>краш 100 1.1</code>
+Пример: <code>краш 100 4</code>''')
+			return
+		
+	except:
+		await message.answer(f'{url}, вы не ввели ставку для игры {lose}')
+		return
+	
+	bet2 = bet+1 if bet < 4 else (bet+3 if bet <= 7 else 10)
+	rnumber = round(random.uniform(1.01, bet2), 2)
+	
+	if bet < rnumber:
+		summ = int(bet*summ)
+		await message.answer(f'🚀 {url}, ракета остановилась на x{rnumber} 📈\n✅ Ты выиграл! Твой выигрыш составил {tr(summ)}$')
+		await update_balance(uid, summ, operation='add')
+	else:
+		await message.answer(f'🚀 {url}, ракета упала на x{rnumber} 📉\n❌ Ты проиграл {tr(summ)}$')
+		await update_balance(uid, summ, operation='subtract')
+	
+
 def register_handlers(dp: Dispatcher):
 	dp.register_message_handler(oxota, lambda message: message.text.lower().startswith('охота'))
 	dp.register_message_handler(monetka, lambda message: message.text.lower().startswith('монетка'))
 	dp.register_message_handler(fishing, lambda message: message.text.lower().startswith('рыбалка'))
 	dp.register_message_handler(roulette_ruless, lambda message: message.text.lower() == 'рулетка')
 	dp.register_message_handler(roulette, lambda message: message.text.lower().startswith('рулетка'))
-	
+	dp.register_message_handler(crash, lambda message: message.text.lower().startswith('краш'))
+
 
 MODULE_DESCRIPTION = {
 	'name': '🎮 Новые игры',
-	'description': 'Модуль добавляет новые игры:\n- Монетка\n- Охота\n- Рыбалка\n- Рулетка'
+	'description': 'Модуль добавляет новые игры:\n- Монетка\n- Охота\n- Рыбалка\n- Рулетка\n - Краш'
 }

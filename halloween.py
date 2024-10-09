@@ -55,7 +55,7 @@ MONSTER = {'name': '', 'hp': 0, 'time': 0, 'url': '', 'max_hp': 0}
 
 class Database:
 	def __init__(self):
-		self.conn = sqlite3.connect('modules/halloween.db')
+		self.conn = sqlite3.connect('modules/temp/halloween.db')
 		self.cursor = self.conn.cursor()
 		self.create_tables()
 
