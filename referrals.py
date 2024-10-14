@@ -154,7 +154,7 @@ event_manager.subscribe('start_event', on_start_event)
 
 def register_handlers(dp: Dispatcher):
 	dp.register_message_handler(settings, commands='refsetting')
-	dp.register_message_handler(ref_new_summ, lambda message: message.text.lower().startswith(f'@{cfg.bot_username} referal-set-summ'))
+	dp.register_message_handler(ref_new_summ, lambda message: message.text.lower().startswith(f'@{cfg.bot_username.lower()} referal-set-summ'))
 	dp.register_message_handler(ref, lambda message: message.text.lower() == 'реф')
 
 
