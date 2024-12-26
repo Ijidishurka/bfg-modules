@@ -4,40 +4,33 @@ from aiogram.dispatcher import Dispatcher
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from assets.transform import transform_int as tr
 from decimal import Decimal
-from assets.antispam import antispam
-from datetime import datetime
+from assets.antispam import antispam, antispam_earning, new_earning
 from bot import bot
 import time
 import sqlite3
 import random
 
-from commands import db as gdb
 from commands.db import conn as conngdb, cursor as cursorgdb
 
 from commands.main import CONFIG as HELLO_CONFIG
 from commands.help import CONFIG as HELP_CONFIG
+from user import BFGuser
 
 atacktime = dict()
 
 
-async def atack_time(id):
-	utime = 60
-	dnow = datetime.now()
-	last = atacktime.get(id)
+async def atack_time(user_id: int, utime=60) -> tuple:
+    current_time = int(time.time())
+    last_time = atacktime.get(user_id, 0)
 
-	if not last:
-		atacktime[id] = dnow
-		last = datetime.fromtimestamp(0)
-	if last:
-		delta_seconds = (dnow - last).total_seconds()
-		sl = int(utime - delta_seconds)
+    delta_seconds = current_time - last_time
+    sl = int(utime - delta_seconds)
 
-		if sl > 0:
-			left = sl
-			return 1, left
-		else:
-			atacktime[id] = dnow
-			return 0, 0
+    if sl > 0:
+        return 1, sl
+    else:
+        atacktime[user_id] = current_time
+        return 0, 0
 
 
 MONSTERS = [
@@ -123,9 +116,10 @@ def edit_halloween_message():
 	HELP_CONFIG['help_game'] += '\n   👻 Джекпот'
 	
 
-def new_monster():
+def new_monster() -> None:
 	global MONSTER
 	monster = MONSTER['name']
+	
 	while True:
 		new_monster = random.choice(MONSTERS)
 		if monster != new_monster[0]:
@@ -139,13 +133,13 @@ db = Database()
 new_monster()
 
 
-def atack_kb():
+def atack_kb() -> InlineKeyboardMarkup:
 	keyboards = InlineKeyboardMarkup(row_width=1)
 	keyboards.add(InlineKeyboardButton("🔫 Атаковать", callback_data="event-monster-atack"))
 	return keyboards
 
 
-def format_time(seconds):
+def format_time(seconds: int) -> str:
 	seconds = seconds - int(time.time())
 	
 	def pluralize(value, singular, plural1, plural2):
@@ -163,36 +157,34 @@ def format_time(seconds):
 		return pluralize(seconds, "секунда", "секунды", "секунд")
 	
 	
-async def check_monster():
+async def check_monster() -> None:
 	if time.time() > MONSTER['time'] or MONSTER['hp'] <= 0:
 		new_monster()
 	
 
 @antispam
-async def bag(message: types.Message):
-	user_id = message.from_user.id
-	name = await gdb.url_name(user_id)
-	data = await db.get_balance(user_id)
-	await message.answer(f'{name}, в вашем мешочке:\n🍬 Конфеты: {data[1]}\n🎃 Тыквы: {data[3]}\n🎭 Маски: {data[2]}')
+async def bag(message: types.Message, user: BFGuser):
+	data = await db.get_balance(user.user_id)
+	await message.answer(f'{user.url}, в вашем мешочке:\n🍬 Конфеты: {data[1]}\n🎃 Тыквы: {data[3]}\n🎭 Маски: {data[2]}')
 	
 
 @antispam
-async def monster(message: types.Message):
+async def monster(message: types.Message, user: BFGuser):
 	await check_monster()
 	txt = f'''<b>👻 Монстр {MONSTER['name']}</b>
 ❤️ Здоровье: {MONSTER['hp']}/{MONSTER['max_hp']}
 ⌛️ До смены монстра: {format_time(MONSTER['time'])}'''
-	await bot.send_photo(message.chat.id, photo=MONSTER['url'], caption=txt, reply_markup=atack_kb())
+	msg = await bot.send_photo(message.chat.id, photo=MONSTER['url'], caption=txt, reply_markup=atack_kb())
+	await new_earning(msg)
 	
 
-async def atack(call: types.CallbackQuery):
-	user_id = call.from_user.id
-	name = await gdb.url_name(user_id)
-	status, time = await atack_time(user_id)
+@antispam_earning
+async def atack(call: types.CallbackQuery, user: BFGuser):
+	status, stime = await atack_time(user.user_id)
 	await check_monster()
 	
 	if status == 1:
-		await bot.answer_callback_query(call.id, text=f'👻 Попробуйте снова через {time} секунд.')
+		await bot.answer_callback_query(call.id, text=f'👻 Попробуйте снова через {stime} секунд.')
 		return
 	
 	txt = ''
@@ -202,30 +194,28 @@ async def atack(call: types.CallbackQuery):
 	await bot.answer_callback_query(call.id, text='')
 	
 	if MONSTER['hp'] <= 0:
-		await call.message.answer(f'{name}, вы победили монстра!\nВаша награда: 3🎃')
-		await db.upd_pumpkins(user_id, 3)
+		await call.message.answer(f'{user.name}, вы победили монстра!\nВаша награда: 3🎃')
+		await db.upd_pumpkins(user.user_id, 3)
 		new_monster()
 	else:
 		if random.randint(1, 3) == 1:
 			candy = random.randint(1, 3)
-			await db.upd_candies(user_id, candy)
+			await db.upd_candies(user.user_id, candy)
 			txt = f', +{candy}🍬'
 			
-		await call.message.answer(f'{name}, вы нанесли удар по монстру!\n-{hp}❤️{txt}')
+		await call.message.answer(f'{user.name}, вы нанесли удар по монстру!\n-{hp}❤️{txt}')
 		
 		
 @antispam
-async def startle(message: types.Message):
-	user_id = message.from_user.id
-	name = await gdb.url_name(user_id)
-	info = await db.get_balance(user_id)
+async def startle(message: types.Message, user: BFGuser):
+	info = await db.get_balance(user.user_id)
 	
 	if info[2] <= 0:
-		await message.answer(f'😢 {name}, у вас недостаточно масок для участия. Найдите или купите новые!')
+		await message.answer(f'😢 {user.url}, у вас недостаточно масок для участия. Найдите или купите новые!')
 		return
 	
 	if not message.reply_to_message:
-		await message.answer(f'{name}, вы должны ответить на сообщение пользователя! 👻')
+		await message.answer(f'{user.url}, вы должны ответить на сообщение пользователя! 👻')
 		return
 	
 	win_messages = [
@@ -254,19 +244,17 @@ async def startle(message: types.Message):
 	
 	if random.random() < 0.5:
 		msg = random.choice(win_messages) + f'\n\n<i>Вы получили 1🎃</i>'
-		await db.upd_pumpkins(user_id, 1)
+		await db.upd_pumpkins(user.user_id, 1)
 	else:
 		msg = random.choice(lose_messages)
 	
-	await message.answer(msg.format(name), reply=message.reply_to_message.message_id)
-	await db.upd_mask(user_id, -1)
+	await message.answer(msg.format(user.url), reply=message.reply_to_message.message_id)
+	await db.upd_mask(user.user_id, -1)
 	
 	
 @antispam
-async def shop(message: types.Message):
-	user_id = message.from_user.id
-	name = await gdb.url_name(user_id)
-	await message.answer(f'''{name}, добро пожаловать в наш магазин:
+async def shop(message: types.Message, user: BFGuser):
+	await message.answer(f'''{user.url}, добро пожаловать в наш магазин:
 
 Маски: 25🍬 - 1🎭
 Деньги: 1🍬 - 1е5$
@@ -277,10 +265,8 @@ async def shop(message: types.Message):
 
 
 @antispam
-async def buy(message: types.Message):
-	user_id = message.from_user.id
-	name = await gdb.url_name(user_id)
-	info = await db.get_balance(user_id)
+async def buy(message: types.Message, user: BFGuser):
+	info = await db.get_balance(user.user_id)
 	
 	try:
 		summ = int(message.text.split()[2])
@@ -293,34 +279,32 @@ async def buy(message: types.Message):
 	if message.text.lower().startswith('купить'):
 		summ2 = summ * 25
 		if summ2 > info[1]:
-			await message.answer(f'{name}, у вас недостаточно конфет 😳')
+			await message.answer(f'{user.url}, у вас недостаточно конфет 😳')
 			return
 		
-		await db.upd_mask(user_id, summ)
-		await db.upd_candies(user_id, (summ2*-1))
-		await message.answer(f'{name}, вы успешно купили {summ}🎭 за {summ2}🍬')
+		await db.upd_mask(user.user_id, summ)
+		await db.upd_candies(user.user_id, (summ2*-1))
+		await message.answer(f'{user.url}, вы успешно купили {summ}🎭 за {summ2}🍬')
 	else:
 		if summ > info[1]:
-			await message.answer(f'{name}, у вас недостаточно конфет 😳')
+			await message.answer(f'{user.url}, у вас недостаточно конфет 😳')
 			return
 		
 		summ2 = summ * 1000000
-		await db.upd_candies(user_id, (summ*-1))
-		await db.upd_money(user_id, summ2)
-		await message.answer(f'{name}, вы успешно обменяли {summ}🍬 на {tr(summ2)}$ 👻')
+		await db.upd_candies(user.user_id, (summ*-1))
+		await db.upd_money(user.user_id, summ2)
+		await message.answer(f'{user.url}, вы успешно обменяли {summ}🍬 на {tr(summ2)}$ 👻')
 
 
 @antispam
-async def jackpot(message: types.Message):
-	user_id = message.from_user.id
-	name = await gdb.url_name(user_id)
-	info = await db.get_balance(user_id)
+async def jackpot(message: types.Message, user: BFGuser):
+	info = await db.get_balance(user.user_id)
 	
 	if info[3] <= 0:
-	    await message.answer(f'{name}, у вас нету тыковок 👻')
+	    await message.answer(f'{user.url}, у вас нету тыковок 👻')
 	    return
 	
-	await db.upd_pumpkins(user_id, -1)
+	await db.upd_pumpkins(user.user_id, -1)
 	
 	rewards = {'💸': 0, '🍬': 0, '🎭': 0, '💳': 0}
 	emoji_list = ['💸', '🍬', '🎭', '💳']
@@ -341,33 +325,33 @@ async def jackpot(message: types.Message):
 	txt = ''
 	if rewards['💸'] > 0:
 		txt += f'\n+{tr(rewards["💸"])}$ 💰'
-		await db.upd_money(user_id, rewards["💸"])
+		await db.upd_money(user.user_id, rewards["💸"])
 	if rewards['🍬'] > 0:
 		txt += f'\n+{rewards["🍬"]}🍬'
-		await db.upd_candies(user_id, rewards["🍬"])
+		await db.upd_candies(user.user_id, rewards["🍬"])
 	if rewards['🎭'] > 0:
 		txt += f'\n+{rewards["🎭"]}🎭'
-		await db.upd_mask(user_id, rewards["🎭"])
+		await db.upd_mask(user.user_id, rewards["🎭"])
 	if rewards['💳'] > 0:
 		txt += f'\n+{rewards["💳"]}💳 B-coin'
-		await db.upd_ecoins(user_id, rewards["💳"])
+		await db.upd_ecoins(user.user_id, rewards["💳"])
 	
-	msg = await message.reply(f"{name}, ❓|❓|❓")
+	msg = await message.reply(f"{user.url}, ❓|❓|❓")
 	
 	try:
 		for i in range(0, 3):
 			await asyncio.sleep(0.45)
-			new_text = f'{name}, ' + '|'.join(emojis[:i + 1] + ['❓'] * (len(emojis) - (i + 1)))
+			new_text = f'{user.url}, ' + '|'.join(emojis[:i + 1] + ['❓'] * (len(emojis) - (i + 1)))
 			await msg.edit_text(new_text)
 		
 		await asyncio.sleep(0.8)
-		await msg.edit_text(f"{name}, {'|'.join(emojis)}\n<i>{txt}</i>")
+		await msg.edit_text(f"{user.url}, {'|'.join(emojis)}\n<i>{txt}</i>")
 	except:
-		await message.reply(f"{name}, {'|'.join(emojis)}\n<i>{txt}</i>")
+		await message.reply(f"{user.url}, {'|'.join(emojis)}\n<i>{txt}</i>")
 	
 	
 @antispam
-async def event(message: types.Message):
+async def event(message: types.Message, user: BFGuser):
 	await message.answer(f'''<b>Ивент Хэллоуин 🎃</b>
 <i>Добро пожаловать на Хэллоуинское событие! Жуткие приключения ждут вас, и каждый участник сможет проявить себя в различных конкурсах и заданиях. Мы подготовили крутые призы, которые можно выиграть!</i>
 

@@ -14,13 +14,14 @@ import config as cfg
 
 from commands import db as gdb
 from commands.db import conn as conngdb, cursor as cursorgdb
+from user import BFGuser
 
 CONFIG['help_osn'] += '\n   👥 Реф'
 
 games = {}
 
 
-def settings_kb():
+def settings_kb() -> InlineKeyboardMarkup:
 	keyboards = InlineKeyboardMarkup(row_width=1)
 	keyboards.add(InlineKeyboardButton("✍️ Ввести значение", switch_inline_query_current_chat="referal-set-summ "))
 	return keyboards
@@ -106,7 +107,7 @@ async def ref_new_summ(message: types.Message):
 		summ = message.text.split()[2].replace('е', 'e')
 		summ = int(float(summ))
 	except:
-		await message.answer(f'{name}, вы не ввели новую награду за реферала\nПример: @{cfg.bot_username} referal-set-summ 1e20')
+		await message.answer(f'{name}, вы не ввели новую награду за реферала\nПример: @{cfg.bot_username.lower()} referal-set-summ 1e20')
 		return
 	
 	await db.upd_summ(summ)
@@ -114,15 +115,12 @@ async def ref_new_summ(message: types.Message):
 	
 
 @antispam
-async def ref(message: types.Message):
-	user_id = message.from_user.id
-	name = await gdb.url_name(user_id)
+async def ref(message: types.Message, user: BFGuser):
 	summ = await db.get_summ()
-	data = await db.get_info(user_id)
-	game_id = await db.get_game_id(user_id)
-	await message.answer(f'''https://t.me/{cfg.bot_username}?start=r{game_id}
+	data = await db.get_info(user.user_id)
+	await message.answer(f'''https://t.me/{cfg.bot_username}?start=r{user.game_id}
 <code>·······························</code>
-{name}, твоя реферальная ссылка, можешь поделиться и получить {trt(summ)}$
+{user.url}, твоя реферальная ссылка, можешь поделиться и получить {trt(summ)}$
 
 👥 <i>Твои рефералы</i>
 <b>• {data[1]} чел.</b>

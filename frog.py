@@ -10,16 +10,16 @@ from assets.antispam import antispam, new_earning_msg, antispam_earning
 from assets.transform import transform as trt
 from assets.transform import transform_int as tr
 from bot import bot
-from commands.db import conn, cursor, url_name, get_balance
+from commands.db import conn, cursor
 from commands.help import CONFIG
-from commands.main import win_luser
+from user import BFGuser, BFGconst
 
 CONFIG['help_game'] += '\n   🐸 Квак [ставка]'
 
 games = {}
 
 
-async def update_balance(user_id, amount, operation='subtract'):
+async def update_balance(user_id: int, amount: int | str | Decimal, operation='subtract') -> None:
 	balance = cursor.execute('SELECT balance FROM users WHERE user_id = ?', (user_id,)).fetchone()[0]
 	
 	if operation == 'add':
@@ -122,50 +122,46 @@ class Game:
 
 
 @antispam
-async def start(message: types.Message):
-	user_id = message.from_user.id
-	name = await url_name(user_id)
-	balance = await get_balance(user_id)
-	win, lose = await win_luser()
+async def start(message: types.Message, user: BFGuser):
+	win, lose = BFGconst.emj()
 	
-	if user_id in games:
-		await message.answer(f'{name}, у вас уже есть активная игра {lose}')
+	if user.user_id in games:
+		await message.answer(f'{user.url}, у вас уже есть активная игра {lose}')
 		return
 	
 	try:
 		if message.text.lower().split()[1] in ['все', 'всё']:
-			summ = balance
+			summ = int(user.balance)
 		else:
 			summ = message.text.split()[1].replace('е', 'e')
 			summ = int(float(summ))
 	except:
-		await message.answer(f'{name}, вы не ввели ставку для игры {lose}')
+		await message.answer(f'{user.url}, вы не ввели ставку для игры {lose}')
 		return
 	
 	if summ < 10:
-		await message.answer(f'{name}, минимальная ставка - 10$ {lose}')
+		await message.answer(f'{user.url}, минимальная ставка - 10$ {lose}')
 		return
 	
-	if summ > int(balance):
-		await message.answer(f'{name}, у вас недостаточно денег {lose}')
+	if summ > int(user.balance):
+		await message.answer(f'{user.url}, у вас недостаточно денег {lose}')
 		return
 	
-	game = Game(message.chat.id, user_id, summ)
-	games[user_id] = game
+	game = Game(message.chat.id, user.user_id, summ)
+	games[user.user_id] = game
 	
-	await update_balance(user_id, summ, operation='subtract')
-	msg = await message.answer(game.get_text('game').format(name), reply_markup=game.get_kb())
+	await update_balance(user.user_id, summ, operation='subtract')
+	msg = await message.answer(game.get_text('game').format(user.url), reply_markup=game.get_kb())
 	await new_earning_msg(msg.chat.id, msg.message_id)
 	game.message_id = msg.message_id
 
 
 @antispam_earning
-async def game_kb(call: types.CallbackQuery):
+async def game_kb(call: types.CallbackQuery, user: BFGuser):
 	user_id = call.from_user.id
 	chat_id = call.message.chat.id
 	message_id = call.message.message_id
 	game = games.get(user_id, None)
-	name = await url_name(user_id)
 
 	if not game or game.chat_id != chat_id or game.message_id != message_id:
 		await bot.answer_callback_query(call.id, '🐸 Игра не найдена.')
@@ -175,22 +171,21 @@ async def game_kb(call: types.CallbackQuery):
 	result = game.make_move(x)
 
 	if result == 'lose':
-		await call.message.edit_text(game.get_text('lose').format(name))
+		await call.message.edit_text(game.get_text('lose').format(user.url))
 		games.pop(user_id)
 	elif result == 'win':
-		await call.message.edit_text(game.get_text('win').format(name))
+		await call.message.edit_text(game.get_text('win').format(user.url))
 		games.pop(user_id)
 	else:
-		await call.message.edit_text(game.get_text('game').format(name), reply_markup=game.get_kb())
+		await call.message.edit_text(game.get_text('game').format(user.url), reply_markup=game.get_kb())
 
 
 @antispam_earning
-async def game_stop(call: types.CallbackQuery):
+async def game_stop(call: types.CallbackQuery, user: BFGuser):
 	user_id = call.from_user.id
 	chat_id = call.message.chat.id
 	message_id = call.message.message_id
 	game = games.get(user_id, None)
-	name = await url_name(user_id)
 	
 	if not game or game.chat_id != chat_id or game.message_id != message_id:
 		await bot.answer_callback_query(call.id, '🐸 Игра не найдена.')
@@ -198,7 +193,7 @@ async def game_stop(call: types.CallbackQuery):
 	
 	await game.stop_game()
 	txt = 'stop' if game.player[0] == 4 else 'win'
-	await call.message.edit_text(game.get_text(txt).format(name))
+	await call.message.edit_text(game.get_text(txt).format(user.url))
 	games.pop(user_id)
 
 

@@ -6,12 +6,12 @@ from decimal import Decimal
 from aiogram import types, Dispatcher
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-from assets.antispam import antispam
+from assets.antispam import antispam, antispam_earning, new_earning
 from assets.transform import transform_int as tr
 from bot import bot
-from commands.db import conn, cursor, url_name, get_balance, reg_user
-from commands.main import win_luser
+from commands.db import conn, cursor, url_name
 from commands.help import CONFIG
+from user import BFGuser, BFGconst
 
 CONFIG['help_game'] += '\n   🔘 Кн [ставка]'
 
@@ -20,14 +20,14 @@ games = []
 waiting = {}
 
 
-def creat_start_kb():
+def creat_start_kb() -> InlineKeyboardMarkup:
 	keyboard = InlineKeyboardMarkup(row_width=1)
 	keyboard.add(InlineKeyboardButton(text="🤯 Принять вызов", callback_data=f"tictactoe-start"))
 	return keyboard
 
 
-async def update_balance(uid, amount, operation="subtract"):
-	balance = cursor.execute('SELECT balance FROM users WHERE user_id = ?', (uid,)).fetchone()[0]
+async def update_balance(user_id: int, amount: int | str, operation="subtract") -> None:
+	balance = cursor.execute('SELECT balance FROM users WHERE user_id = ?', (user_id,)).fetchone()[0]
 	
 	if operation == 'add':
 		new_balance = Decimal(str(balance)) + Decimal(str(amount))
@@ -35,8 +35,8 @@ async def update_balance(uid, amount, operation="subtract"):
 		new_balance = Decimal(str(balance)) - Decimal(str(amount))
 	
 	new_balance = "{:.0f}".format(new_balance)
-	cursor.execute('UPDATE users SET balance = ? WHERE user_id = ?', (str(new_balance), uid))
-	cursor.execute('UPDATE users SET games = games + 1 WHERE user_id = ?', (uid,))
+	cursor.execute('UPDATE users SET balance = ? WHERE user_id = ?', (str(new_balance), user_id))
+	cursor.execute('UPDATE users SET games = games + 1 WHERE user_id = ?', (user_id,))
 	conn.commit()
 	
 
@@ -134,60 +134,56 @@ def find_game_by_userid(user_id):
 
 
 @antispam
-async def start(message: types.Message):
-	user_id = message.from_user.id
-	name = await url_name(user_id)
-	balance = await get_balance(user_id)
-	win, lose = await win_luser()
+async def start(message: types.Message, user: BFGuser):
+	win, lose = BFGconst.emj()
 	
 	if message.chat.type != 'supergroup':
 		return
 	
-	if find_game_by_userid(user_id):
-		await message.answer(f'{name}, у вас уже есть активная игра {lose}')
+	if find_game_by_userid(user.user_id):
+		await message.answer(f'{user.url}, у вас уже есть активная игра {lose}')
 		return
 		
 	try:
 		if message.text.lower().split()[1] in ['все', 'всё']:
-			summ = balance
+			summ = int(user.balance)
 		else:
 			summ = message.text.split()[1].replace('е', 'e')
 			summ = int(float(summ))
 	except:
-		await message.answer(f'{name}, вы не ввели ставку для игры 🫤')
+		await message.answer(f'{user.url}, вы не ввели ставку для игры 🫤')
 		return
 	
 	if summ < 10:
-		await message.answer(f'{name}, минимальная ставка - 10$ {lose}')
+		await message.answer(f'{user.url}, минимальная ставка - 10$ {lose}')
 		return
 	
-	if summ > int(balance):
-		await message.answer(f'{name}, у вас недостаточно денег {lose}')
+	if summ > int(user.balance):
+		await message.answer(f'{user.url}, у вас недостаточно денег {lose}')
 		return
 	
-	msg = await message.answer(f"❌⭕️ {name} хочет сыграть в крестики-нолики\n💰 Ставка: {tr(summ)}$\n⏳ <i>Ожидаю противника в течении 3х минут</i>", reply_markup=creat_start_kb())
-	game = Game(msg.chat.id, user_id, summ, msg.message_id)
-	await update_balance(user_id, summ, operation='subtract')
+	msg = await message.answer(f"❌⭕️ {user.url} хочет сыграть в крестики-нолики\n💰 Ставка: {tr(summ)}$\n⏳ <i>Ожидаю противника в течении 3х минут</i>", reply_markup=creat_start_kb())
+	game = Game(msg.chat.id, user.user_id, summ, msg.message_id)
+	await new_earning(msg)
+	await update_balance(user.user_id, summ, operation='subtract')
 	waiting[game] = int(time.time()) + 180
 	
-	
-async def start_game_kb(call: types.CallbackQuery):
-	user_id = call.from_user.id
-	await reg_user(user_id)
-	balance = await get_balance(user_id)
+
+@antispam_earning
+async def start_game_kb(call: types.CallbackQuery, user: BFGuser):
 	game = find_waiting(call.message.chat.id, call.message.message_id)
 	
-	if not game or user_id == game.user_id:
+	if not game or user.user_id == game.user_id:
 		return
 	
-	if balance < game.summ:
+	if int(user.balance) < game.summ:
 		await bot.answer_callback_query(call.id, text='❌ У вас недостаточно денег.')
 		return
 	
 	games.append(game)
 	waiting.pop(game)
 	
-	game.r_id = user_id
+	game.r_id = user.user_id
 	game.start()
 	
 	cross = await url_name(game.chips['cross'])
@@ -202,28 +198,27 @@ async def start_game_kb(call: types.CallbackQuery):
 {zerop}⭕️ {zero}'''
 	
 	await call.message.edit_text(text, reply_markup=game.get_kb())
-	await update_balance(user_id, game.summ, operation='subtract')
+	await update_balance(user.user_id, game.summ, operation='subtract')
 
 
-async def game_kb(call: types.CallbackQuery):
-	user_id = call.from_user.id
-	await reg_user(user_id)
+@antispam_earning
+async def game_kb(call: types.CallbackQuery, user: BFGuser):
 	game = find_game_by_mid(call.message.chat.id, call.message.message_id)
 	
 	if not game:
 		return
 	
-	if game.r_id != user_id and game.user_id != user_id:
+	if game.r_id != user.user_id and game.user_id != user.user_id:
 		await bot.answer_callback_query(call.id, '💩 Вы не можете нажать на эту кнопку.')
 		return
 	
-	if game.get_user_chips(user_id) != game.move:
+	if game.get_user_chips(user.user_id) != game.move:
 		await bot.answer_callback_query(call.id, text='❌ Не ваш ход.')
 		return
 	
 	x = int(call.data.split('_')[1])
 	y = int(call.data.split('_')[2])
-	result = game.make_move(x, y, user_id)
+	result = game.make_move(x, y, user.user_id)
 	
 	if result == 'not empty':
 		await bot.answer_callback_query(call.id, text='❌ Эта клетка уже занята.')

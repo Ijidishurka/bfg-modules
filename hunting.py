@@ -5,11 +5,11 @@ from aiogram import types, Dispatcher
 from commands.db import conn, cursor, url_name
 from commands.games.main import game_check
 from assets.transform import transform_int as tr
-from commands.main import win_luser
 from assets.antispam import antispam
 from decimal import Decimal
 
 from commands.help import CONFIG
+from user import BFGuser, BFGconst
 
 CONFIG['help_game'] += '''
    🔫 Охота [ставка]
@@ -19,8 +19,8 @@ CONFIG['help_game'] += '''
    🚀 Краш [ставка] [х]'''
 
 
-async def update_balance(uid, amount, operation="subtract"):
-	balance = cursor.execute('SELECT balance FROM users WHERE user_id = ?', (uid,)).fetchone()[0]
+async def update_balance(user_id: int, amount: int | str, operation="subtract") -> None:
+	balance = cursor.execute('SELECT balance FROM users WHERE user_id = ?', (user_id,)).fetchone()[0]
 	
 	if operation == 'add':
 		new_balance = Decimal(str(balance)) + Decimal(str(amount))
@@ -28,15 +28,14 @@ async def update_balance(uid, amount, operation="subtract"):
 		new_balance = Decimal(str(balance)) - Decimal(str(amount))
 	
 	new_balance = "{:.0f}".format(new_balance)
-	cursor.execute('UPDATE users SET balance = ? WHERE user_id = ?', (str(new_balance), uid))
-	cursor.execute('UPDATE users SET games = games + 1 WHERE user_id = ?', (uid,))
+	cursor.execute('UPDATE users SET balance = ? WHERE user_id = ?', (str(new_balance), user_id))
+	cursor.execute('UPDATE users SET games = games + 1 WHERE user_id = ?', (user_id,))
 	conn.commit()
 
 
 @antispam
-async def oxota(message: types.Message):
-	uid = message.from_user.id
-	summ = await game_check(message, 1)
+async def oxota(message: types.Message, user: BFGuser):
+	summ = await game_check(message, user, index=1)
 	
 	if not summ:
 		return
@@ -64,12 +63,12 @@ async def oxota(message: types.Message):
 	if chance < 0.45:
 		su = int(summ * 0.5)
 		txt = random.choice(wins).format(tr(su))
-		await update_balance(uid, su, operation='add')
+		await update_balance(user.user_id, su, operation='add')
 	elif chance < 0.5:
 		txt = '💥❎ | Вы промазали...  деньги остаются при вас.'
 	else:
 		txt = random.choice(losses)
-		await update_balance(uid, summ, operation='subtract')
+		await update_balance(user.user_id, summ, operation='subtract')
 	
 	msg = await message.answer("💥 | Выстрел... посмотрим в кого вы попали")
 	await asyncio.sleep(2)
@@ -77,10 +76,8 @@ async def oxota(message: types.Message):
 
 
 @antispam
-async def monetka(message: types.Message):
-	uid = message.from_user.id
-	win, lose = await win_luser()
-	name = await url_name(uid)
+async def monetka(message: types.Message, user: BFGuser):
+	win, lose = BFGconst.emj()
 	
 	try:
 		action = message.text.lower().split()[1]
@@ -88,34 +85,32 @@ async def monetka(message: types.Message):
 	except:
 		return
 	
-	summ = await game_check(message, 2)
+	summ = await game_check(message, user, index=2)
 	
 	if not summ or action not in ['решка', 'орёл']:
 		return
 	
 	win = random.choices(['решка', 'орёл', 'ребро'], weights=[49, 49, 2], k=1)[0]
 	win2 = "решку" if win == "решка" else 'орла'
-	print(win)
 	
 	if win == action:
 		summ = int(summ * 2)
-		await update_balance(uid, summ, operation='add')
-		txt = f"🎉 {name}, удача на вашей стороне! Монетка упала на {win2}, и вы получили +{tr(summ)}$! {win}"
+		await update_balance(user.user_id, summ, operation='add')
+		txt = f"🎉 {user.url}, удача на вашей стороне! Монетка упала на {win2}, и вы получили +{tr(summ)}$! {win}"
 	elif win == 'ребро':
-		txt = f"😲 Невероятно, {name}! Монетка упала ребром! Такое случается крайне редко."
+		txt = f"😲 Невероятно, {user.url}! Монетка упала ребром! Такое случается крайне редко."
 	else:
-		await update_balance(uid, summ, operation='subtract')
-		txt = f"💸 {name}, не повезло... Монетка упала на {win2}, и ваш баланс уменьшился на -{tr(summ)}$. {lose}"
+		await update_balance(user.user_id, summ, operation='subtract')
+		txt = f"💸 {user.url}, не повезло... Монетка упала на {win2}, и ваш баланс уменьшился на -{tr(summ)}$. {lose}"
 	
 	msg = await message.answer("🪙 | Подкидываем монетку... затаим дыхание и посмотрим, что выпало!")
 	await asyncio.sleep(2)
-	await bot.edit_message_text(chat_id=msg.chat.id, message_id=msg.message_id, text=txt)
+	await msg.edit_text(text=txt)
 
 
 @antispam
-async def fishing(message: types.Message):
-	uid = message.from_user.id
-	summ = await game_check(message, 1)
+async def fishing(message: types.Message, user: BFGuser):
+	summ = await game_check(message, user, index=1)
 	
 	if not summ:
 		return
@@ -151,20 +146,20 @@ async def fishing(message: types.Message):
 	if chance < 0.45:
 		su = int(summ * 0.5)
 		txt = random.choice(wins).format(tr(su))
-		await update_balance(uid, su, operation='add')
+		await update_balance(user.user_id, su, operation='add')
 	elif chance < 0.5:
 		txt = '🎣❎ | Вы забыли удочку...  деньги остаются при вас.'
 	else:
 		txt = random.choice(losses)
-		await update_balance(uid, summ, operation='subtract')
+		await update_balance(user.user_id, summ, operation='subtract')
 	
 	msg = await message.answer("🎣 | Закидываем удочку... давайте посмотрим, что ждет нас на дне!")
 	await asyncio.sleep(2)
-	await bot.edit_message_text(chat_id=msg.chat.id, message_id=msg.message_id, text=txt)
+	await msg.edit_text(text=txt)
 
 
 @antispam
-async def roulette_ruless(message: types.Message):
+async def roulette_ruless(message: types.Message, user: BFGuser):
 	await message.answer(f'''<b>Инструкция по игре в рулетку</b>
 
 Доступные ставки:
@@ -208,11 +203,9 @@ stickers_ruletka = {
 
 
 @antispam
-async def roulette(message: types.Message):
-	uid = message.from_user.id
-	win, lose = await win_luser()
-	url = await url_name(uid)
-	summ = await game_check(message, 2)
+async def roulette(message: types.Message, user: BFGuser):
+	win, lose = BFGconst.emj()
+	summ = await game_check(message, user, index=2)
 	
 	if not summ:
 		return
@@ -220,10 +213,10 @@ async def roulette(message: types.Message):
 	try:
 		bet = message.text.lower().split()[1]
 		if bet not in bets_ruletka:
-			await message.answer(f'{url}, вы ввели не корректную ставку {lose}')
+			await message.answer(f'{user.url}, вы ввели не корректную ставку {lose}')
 			return
 	except:
-		await message.answer(f'{url}, вы не ввели ставку для игры {lose}')
+		await message.answer(f'{user.url}, вы не ввели ставку для игры {lose}')
 		return
 	
 	if bet in ['к', 'ч']:
@@ -247,11 +240,11 @@ async def roulette(message: types.Message):
 	if win:
 		multiplier = 2 if bet in ['к', 'ч', 'чет', 'нечет'] else (3 if bet in ['1-12', '13-24', '25-36'] else 36)
 		su = int(summ * multiplier)
-		txt = f"{url}, шарик остановился на {winning_number} ({stxt}). Вы выиграли {tr(su)}$"
-		await update_balance(uid, su, operation='add')
+		txt = f"{user.url}, шарик остановился на {winning_number} ({stxt}). Вы выиграли {tr(su)}$"
+		await update_balance(user.user_id, su, operation='add')
 	else:
-		txt = f"{url}, шарик остановился на {winning_number} ({stxt}). Вы проиграли -{tr(summ)}$"
-		await update_balance(uid, summ, operation='subtract')
+		txt = f"{user.url}, шарик остановился на {winning_number} ({stxt}). Вы проиграли -{tr(summ)}$"
+		await update_balance(user.user_id, summ, operation='subtract')
 	
 	sticker = random.choice(stickers_ruletka[color])
 	msg = await bot.send_sticker(message.chat.id, sticker=sticker)
@@ -260,11 +253,9 @@ async def roulette(message: types.Message):
 
 
 @antispam
-async def crash(message: types.Message):
-	uid = message.from_user.id
-	win, lose = await win_luser()
-	url = await url_name(uid)
-	summ = await game_check(message, 1)
+async def crash(message: types.Message, user: BFGuser):
+	win, lose = BFGconst.emj()
+	summ = await game_check(message, user, index=1)
 	
 	if not summ:
 		return
@@ -272,7 +263,7 @@ async def crash(message: types.Message):
 	try:
 		bet = round(float(message.text.lower().split()[2]), 2)
 		if not (1.01 <= bet <= 10):
-			await message.answer(f'''🥶 {url}, <i>ты ввел что-то неправильно!</i>
+			await message.answer(f'''🥶 {user.url}, <i>ты ввел что-то неправильно!</i>
 <code>·····················</code>
 📈 <b>Краш [ставка] [1.01-10]</b>
 
@@ -281,7 +272,7 @@ async def crash(message: types.Message):
 			return
 		
 	except:
-		await message.answer(f'{url}, вы не ввели ставку для игры {lose}')
+		await message.answer(f'{user.url}, вы не ввели ставку для игры {lose}')
 		return
 	
 	bet2 = bet+1 if bet < 4 else (bet+3 if bet <= 7 else 10)
@@ -289,11 +280,11 @@ async def crash(message: types.Message):
 	
 	if bet < rnumber:
 		summ = int(bet*summ)
-		await message.answer(f'🚀 {url}, ракета остановилась на x{rnumber} 📈\n✅ Ты выиграл! Твой выигрыш составил {tr(summ)}$')
-		await update_balance(uid, summ, operation='add')
+		await message.answer(f'🚀 {user.url}, ракета остановилась на x{rnumber} 📈\n✅ Ты выиграл! Твой выигрыш составил {tr(summ)}$')
+		await update_balance(user.user_id, summ, operation='add')
 	else:
-		await message.answer(f'🚀 {url}, ракета упала на x{rnumber} 📉\n❌ Ты проиграл {tr(summ)}$')
-		await update_balance(uid, summ, operation='subtract')
+		await message.answer(f'🚀 {user.url}, ракета упала на x{rnumber} 📉\n❌ Ты проиграл {tr(summ)}$')
+		await update_balance(user.user_id, summ, operation='subtract')
 	
 
 def register_handlers(dp: Dispatcher):
