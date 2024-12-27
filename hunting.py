@@ -275,8 +275,8 @@ async def crash(message: types.Message, user: BFGuser):
 		await message.answer(f'{user.url}, вы не ввели ставку для игры {lose}')
 		return
 	
-	bet2 = bet+1 if bet < 4 else (bet+3 if bet <= 7 else 10)
-	rnumber = round(random.uniform(1.01, bet2), 2)
+	bet2 = bet if bet < 2 else (bet+3 if bet <= 7 else 10)
+	rnumber = round(random.uniform(1, bet2), 2)
 	
 	if bet < rnumber:
 		summ = int(bet*summ)
