@@ -28,10 +28,10 @@
       "description": "Ивент-модуль хэллоуин:\n- Новое оформление\n- Новый ивент \"монстры\"\n- Новая игра\n- Новые игровые валюты\n\n* Модуль использует собственную базу данных\n* Помощью по модулю введите \"хеллоуин\"",
       "url": "https://raw.githubusercontent.com/Ijidishurka/bfg-modules/refs/heads/main/halloween.py"
     },
-     "winter_calendar": {
+     "wcalendar": {
       "name": "\uD83C\uDF85 Winter-calendar",
       "description": "Ивент-модуль зима:\n- Новое оформление\n- Ивент календарь (команда \"календарь\")\n\n* Модуль использует собственную базу данных",
-      "url": "https://raw.githubusercontent.com/Ijidishurka/bfg-modules/refs/heads/main/winter_calendar.py"
+      "url": "https://raw.githubusercontent.com/Ijidishurka/bfg-modules/refs/heads/main/wcalendar.py"
     }
   },
 
