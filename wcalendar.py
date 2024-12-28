@@ -217,17 +217,15 @@ async def event_calendar_call(call: types.CallbackQuery, user: BFGuser):
 
 
 @antispam
-@admin_only()
+@admin_only(private=True)
 async def edit_prizes_cmd(message: types.Message, user: BFGuser):
 	day = await db.get_day()
 	prize = await db.get_prizes()
 	
-	msg = await message.answer('🎅 <b>ХО-ХО-ХО! Новогодняя доставка! Получите и распишитесь:</b>', reply_markup=info_prizes_kb(prize, day, user.user_id))
-	await new_earning(msg)
+	await message.answer('🎅 <b>ХО-ХО-ХО! Новогодняя доставка! Получите и распишитесь:</b>', reply_markup=info_prizes_kb(prize, day, user.user_id))
 	
 	
-@antispam_earning
-async def edit_prize_kb(call: types.CallbackQuery, user: BFGuser):
+async def edit_prize_kb(call: types.CallbackQuery):
 	day = int(call.data.split('_')[1].split('|')[0])
 	await call.message.edit_text(f'🎅 Выберите новую награду для дня <b>#{day}</b>:', reply_markup=edit_prizes_kb(day))
 	
