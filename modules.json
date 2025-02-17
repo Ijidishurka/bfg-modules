@@ -3,22 +3,22 @@
     "hunting": {
       "name": "\uD83C\uDFAE Новые игры",
       "description": "Модуль добавляет новые игры:\n- Монетка\n- Охота\n- Рыбалка\n- Рулетка",
-      "url": "https://raw.githubusercontent.com/Ijidishurka/bfg-modules/refs/heads/main/hunting.py"
+      "url": "https://raw.githubusercontent.com/Ijidishurka/bfg-modules/refs/heads/main/games/hunting.py"
     },
     "TicTacToe": {
       "name": "❌⭕️ Крестики-нолики",
       "description": "Новая игра 'крестики-нолики' против других игроков (на деньги)",
-      "url": "https://raw.githubusercontent.com/Ijidishurka/bfg-modules/refs/heads/main/TicTacToe.py"
+      "url": "https://raw.githubusercontent.com/Ijidishurka/bfg-modules/refs/heads/main/games/TicTacToe.py"
     },
     "frog": {
       "name": "\uD83D\uDC38 Квак",
       "description": "Новая игра 'квак'",
-      "url": "https://raw.githubusercontent.com/Ijidishurka/bfg-modules/refs/heads/main/frog.py"
+      "url": "https://raw.githubusercontent.com/Ijidishurka/bfg-modules/refs/heads/main/games/frog.py"
     },
     "gold": {
       "name": "\uD83C\uDF15 Голд",
       "description": "Новая игра 'голд'",
-      "url": "https://raw.githubusercontent.com/Ijidishurka/bfg-modules/refs/heads/main/gold.py"
+      "url": "https://raw.githubusercontent.com/Ijidishurka/bfg-modules/refs/heads/main/games/gold.py"
     }
   },
 
@@ -26,12 +26,17 @@
     "halloween": {
       "name": "\uD83D\uDC7B Halloween",
       "description": "Ивент-модуль хэллоуин:\n- Новое оформление\n- Новый ивент \"монстры\"\n- Новая игра\n- Новые игровые валюты\n\n* Модуль использует собственную базу данных\n* Помощью по модулю введите \"хеллоуин\"",
-      "url": "https://raw.githubusercontent.com/Ijidishurka/bfg-modules/refs/heads/main/halloween.py"
+      "url": "https://raw.githubusercontent.com/Ijidishurka/bfg-modules/refs/heads/main/events/halloween.py"
     },
      "wcalendar": {
       "name": "\uD83C\uDF85 Winter-calendar",
       "description": "Ивент-модуль зима:\n- Новое оформление\n- Ивент календарь (команда \"календарь\")\n\n* Модуль использует собственную базу данных",
-      "url": "https://raw.githubusercontent.com/Ijidishurka/bfg-modules/refs/heads/main/wcalendar.py"
+      "url": "https://raw.githubusercontent.com/Ijidishurka/bfg-modules/refs/heads/main/events/wcalendar.py"
+    },
+    "14_february": {
+      "name": "\uD83D\uDC98 Валентин",
+      "description": "Ивент на день святого Валентина (копия бфг)\n\n* Модуль использует собственную базу данных",
+      "url": "https://raw.githubusercontent.com/Ijidishurka/bfg-modules/refs/heads/main/events/14_february.py"
     }
   },
 
@@ -39,17 +44,17 @@
     "referrals": {
       "name": "\uD83D\uDC65 Реферальная система",
       "description": "Реферальная система\nЕсть возможность настроить награду за реферала\nКоманда /refsetting",
-      "url": "https://raw.githubusercontent.com/Ijidishurka/bfg-modules/refs/heads/main/referrals.py"
+      "url": "https://raw.githubusercontent.com/Ijidishurka/bfg-modules/refs/heads/main/other/referrals.py"
     },
     "craft": {
       "name": "⛓️\u200D\uD83D\uDCA5 Крафт",
       "description": "Добавляет рецепты крафта за руду.",
-      "url": "https://raw.githubusercontent.com/Ijidishurka/bfg-modules/refs/heads/main/craft.py"
+      "url": "https://raw.githubusercontent.com/Ijidishurka/bfg-modules/refs/heads/main/other/craft.py"
     },
     "avatar": {
       "name": "\uD83D\uDDBC Система аватарок",
       "description": "Система аватарок\\nДобавлена команда \"ава\"\\nДля настройки админ чата отправьте /set_avatar_chat в админ чат",
-      "url": "https://raw.githubusercontent.com/Ijidishurka/bfg-modules/refs/heads/main/avatar.py"
+      "url": "https://raw.githubusercontent.com/Ijidishurka/bfg-modules/refs/heads/main/other/avatar.py"
     }
   },
 
